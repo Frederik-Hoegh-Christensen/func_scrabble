@@ -1,0 +1,13 @@
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\bin\Release\net7.0\ScrabbleBot.deps.json
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\bin\Release\net7.0\ScrabbleBot.dll
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\bin\Release\net7.0\ScrabbleBot.pdb
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\bin\Release\net7.0\ScrabbleUtil.dll
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Release\net7.0\ScrabbleBot.fsproj.AssemblyReference.cache
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Release\net7.0\ScrabbleBot.AssemblyInfoInputs.cache
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Release\net7.0\ScrabbleBot.AssemblyInfo.fs
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Release\net7.0\ScrabbleBot.fsproj.CoreCompileInputs.cache
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Release\net7.0\ScrabbleBot.fsproj.CopyComplete
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Release\net7.0\ScrabbleBot.dll
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Release\net7.0\refint\ScrabbleBot.dll
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Release\net7.0\ScrabbleBot.pdb
+C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Release\net7.0\ref\ScrabbleBot.dll
