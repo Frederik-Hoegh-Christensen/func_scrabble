@@ -21,7 +21,7 @@ module RegEx =
         let pattern = @"([-]?[0-9]+[ ])([-]?[0-9]+[ ])([0-9]+)([A-Z]{1})([0-9]+)[ ]?" 
         Regex.Matches(ts, pattern) |>
         Seq.cast<Match> |> 
-        Seq.map 
+        Seq.map
             (fun t -> 
                 match t.Value with
                 | Regex pattern [x; y; id; c; p] ->
@@ -53,31 +53,52 @@ module State =
     let board st         = st.board
     let dict st          = st.dict
     let playerNumber st  = st.playerNumber
-    let hand st          = st.hand
+    let hand st          = st.hand 
+
+
 
 module Scrabble =
     open System.Threading
 
+
     let playGame cstream pieces (st : State.state) =
 
         let rec aux (st : State.state) =
+            //if st.playerNumber = 1u then printfn "player1moves: %A\n" st.hand
+            //if st.playerNumber = 2u then printfn "player2moves: %A" st.hand
+
+
             Print.printHand pieces (State.hand st)
 
+            printf "len of hand: %A" 
             // remove the force print when you move on from manual input (or when you have learnt the format)
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
             let input =  System.Console.ReadLine()
             let move = RegEx.parseMove input
+            
 
+            
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             send cstream (SMPlay move)
 
             let msg = recv cstream
             debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-
+            
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
+                let myMultiSet = 
+                    newPieces
+                    |> List.fold (fun acc (x, _) -> MultiSet.add x 1u acc) st.hand
+
+                let rm = 
+                    ms
+                    |> List.fold (fun acc (c, (ui, (c, i))) -> MultiSet.remove ui 1u acc) myMultiSet
+
+                
+                
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = st // This state needs to be updated
+                let st' = {st with hand = rm} // This state needs to be updated
+                printfn "multiset: rm: %A" rm
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
@@ -89,7 +110,7 @@ module Scrabble =
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
-            | RGPE err -> printfn "Gameplay Error:\n%A" err; aux st
+            | RGPE err -> printfn "Gameplay Error:\n%A\n MSG:%A Move: %A " err msg move; aux st
 
 
         aux st
