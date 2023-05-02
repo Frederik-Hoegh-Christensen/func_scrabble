@@ -46,14 +46,17 @@ module State =
         dict          : ScrabbleUtil.Dictionary.Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
+        boardS        : Map<coord, char * int>
     }
 
-    let mkState b d pn h = {board = b; dict = d;  playerNumber = pn; hand = h }
+    let mkState b d pn h bs = {board = b; dict = d; playerNumber = pn; hand = h; boardS = bs; }
 
     let board st         = st.board
     let dict st          = st.dict
     let playerNumber st  = st.playerNumber
     let hand st          = st.hand 
+    
+    
 
 
 
@@ -70,9 +73,10 @@ module Scrabble =
 
             Print.printHand pieces (State.hand st)
 
-            printf "len of hand: %A" 
+            
             // remove the force print when you move on from manual input (or when you have learnt the format)
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
+            printfn "board: %A" st.boardS
             let input =  System.Console.ReadLine()
             let move = RegEx.parseMove input
             
@@ -86,19 +90,21 @@ module Scrabble =
             
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
-                let myMultiSet = 
-                    newPieces
-                    |> List.fold (fun acc (x, _) -> MultiSet.add x 1u acc) st.hand
 
                 let rm = 
                     ms
-                    |> List.fold (fun acc (c, (ui, (c, i))) -> MultiSet.remove ui 1u acc) myMultiSet
+                    |> List.fold (fun acc (c, (ui, (c, i))) -> MultiSet.remove ui 1u acc) st.hand
 
-                
-                
+                let addPiecesList = 
+                    newPieces
+                    |> List.fold (fun acc (x, _) -> MultiSet.add x 1u acc) rm
+                printfn "before board: %A" st.boardS
+                let updatedBoardState = List.fold(fun acc (coord,(_, (x,y))) -> Map.add coord (x,y) acc ) st.boardS ms
+
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = {st with hand = rm} // This state needs to be updated
-                printfn "multiset: rm: %A" rm
+                let st' = {st with hand = addPiecesList; boardS = updatedBoardState} // This state needs to be updated
+                //printfn "multiset: rm: %A" rm
+                
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
@@ -110,7 +116,7 @@ module Scrabble =
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
-            | RGPE err -> printfn "Gameplay Error:\n%A\n MSG:%A Move: %A " err msg move; aux st
+            | RGPE err -> printfn "Gameplay Error:\n%A\n Boards:%A Move: %A " err st.boardS move; aux st
 
 
         aux st
@@ -139,5 +145,5 @@ module Scrabble =
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet Map.empty)
         
