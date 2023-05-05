@@ -9,6 +9,7 @@ open ScrabbleUtil.DebugPrint
 
 // The RegEx module is only used to parse human input. It is not used for the final product.
 
+
 module RegEx =
     open System.Text.RegularExpressions
 
@@ -54,10 +55,59 @@ module State =
     let board st         = st.board
     let dict st          = st.dict
     let playerNumber st  = st.playerNumber
-    let hand st          = st.hand 
+    let hand st          = st.hand
     
     
 
+
+module myMod = 
+    open MultiSet
+    let toSet (MS s) =
+        s 
+        |> Map.fold (fun acc (_,b) v -> 
+            let set = Set.ofSeq(Seq.replicate (int v) b)
+            Set.union acc set)
+            Set.empty
+
+
+    let myFunction<'a> (st: State.state) (pieces: Map<uint32, tile>) =
+        let IsFirstMove = st.boardS.IsEmpty
+        let board = st.boardS
+        let handIds = st.hand
+        
+        let hand =
+            pieces
+            |> Map.fold
+                (fun acc k (v) ->
+                    if MultiSet.contains k handIds then
+                        match v with
+                        |  tile -> 
+                            let charVal = tile |> Set.minElement |> fst
+                            Set.add charVal acc
+                        
+                    else
+                        acc)
+                Set.empty
+
+        let realDict = st.dict
+        
+        
+        let rec stepper dict charSet = 
+            
+            let char = Set.minElement charSet
+            
+            match Dictionary.step char dict with
+            
+            | Some (true, d) -> printfn "its a word!: %A" char
+                                stepper d (Set.remove char hand)
+                                
+            | Some (false, d) -> printfn "nope: %A" char
+                                 stepper d (Set.remove char hand)
+                                 
+            | None -> printfn "Char: %A" char
+                      None
+
+        stepper realDict hand
 
 
 module Scrabble =
@@ -69,19 +119,20 @@ module Scrabble =
         let rec aux (st : State.state) =
             //if st.playerNumber = 1u then printfn "player1moves: %A\n" st.hand
             //if st.playerNumber = 2u then printfn "player2moves: %A" st.hand
-
+            let myFunc = (myMod.myFunction st pieces) |> Option.defaultValue 
+            printfn "mybool: %A" myFunc 
 
             Print.printHand pieces (State.hand st)
-
+            
             
             // remove the force print when you move on from manual input (or when you have learnt the format)
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
-            printfn "board: %A" st.boardS
+            //printfn "board: %A" st.boardS
+            
             let input =  System.Console.ReadLine()
             let move = RegEx.parseMove input
             
 
-            
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             send cstream (SMPlay move)
 
@@ -90,6 +141,7 @@ module Scrabble =
             
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
+                
 
                 let rm = 
                     ms
@@ -103,12 +155,14 @@ module Scrabble =
 
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
                 let st' = {st with hand = addPiecesList; boardS = updatedBoardState} // This state needs to be updated
+                
                 //printfn "multiset: rm: %A" rm
                 
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = st // This state needs to be updated
+                let updatedBoardState = List.fold(fun acc (coord,(_, (x,y))) -> Map.add coord (x,y) acc ) st.boardS ms
+                let st' = {st with boardS = updatedBoardState}// This state needs to be updated
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)

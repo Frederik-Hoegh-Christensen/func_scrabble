@@ -9,6 +9,7 @@ module Dictionary
     type Dict = 
         | Leaf of bool
         | Node of bool * Map<char, Dict>
+
     let empty () = Leaf false
 
     let rec lookup (s: string) = function
@@ -48,7 +49,40 @@ module Dictionary
             | (true, value) ->
                 match value with
                 | Leaf b -> Some (b, value)
-                | Node (b,_) -> Some (b,value)
+                | Node (b, v) -> Some (b, value)
             | (false, _) -> None
         | Leaf _ -> None
-    
+
+
+    //let rec buildInc (c:string) letters dict =
+    //    let rec build (prefix: string) dict (bletters: Set<char>)=
+    //        match step (char c) dict with
+    //        | Some (true, Leaf _) -> [prefix]
+    //        | Some (true, Node (_, children)) -> 
+    //            let l = children |> Map.toSeq |> Seq.map fst
+    //            let newPrefix = prefix + string l
+    //            if bletters.Contains(Seq.head l) then
+    //                build newPrefix dict bletters
+    //            else []
+    //        | None -> []
+    //    build c dict letters
+    //let buildWords (c: char) (letters: Set<char>) (myDict: Dict) =
+    //    let rec build (prefix: string) (dict: Dict) (remaining: Set<char>) =
+    //        match step (prefix.[prefix.Length - 1]) dict with
+    //            | Some (true, Leaf _) ->
+    //                // Found a valid word
+    //                [prefix]
+    //            | Some (true, Node (_, children)) ->
+    //                // Continue building the word
+    //                children
+    //                |> Map.toSeq
+    //                |> Seq.collect (fun (k, v) ->
+    //                    let newPrefix = prefix + string k
+    //                    if remaining.Contains(k) then
+    //                        build newPrefix v (remaining.Remove(k))
+    //                    else 
+    //                       []
+    //                )
+    //            | _ -> []
+
+    //    build c myDict letters
