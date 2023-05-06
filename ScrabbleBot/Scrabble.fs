@@ -62,6 +62,7 @@ module State =
 
 module myMod = 
     open MultiSet
+    open System.Text
     let toSet (MS s) =
         s 
         |> Map.fold (fun acc (_,b) v -> 
@@ -83,31 +84,39 @@ module myMod =
                         match v with
                         |  tile -> 
                             let charVal = tile |> Set.minElement |> fst
-                            Set.add charVal acc
+                            let pointVal = tile |> Set.minElement |> snd
+                            Map.add charVal pointVal acc
                         
                     else
                         acc)
-                Set.empty
+                Map.empty
 
         let realDict = st.dict
         
         
-        let rec stepper dict charSet = 
+        let rec stepper dict (charSet:Map<char,int>) (builder: StringBuilder)  = 
             
-            let char = Set.minElement charSet
+            let char = Map.minKeyValue charSet |> fst
             
             match Dictionary.step char dict with
             
-            | Some (true, d) -> printfn "its a word!: %A" char
-                                stepper d (Set.remove char hand)
+            | Some (true, d) -> 
+                                let b = builder.Append(char)
+                                let word = builder.ToString()
+                                printfn "its a word!: %s\n%A" word hand
+                                stepper d (Map.remove char hand) b
                                 
-            | Some (false, d) -> printfn "nope: %A" char
-                                 stepper d (Set.remove char hand)
+            | Some (false, d) -> 
+                                 let b = builder.Append(char)
+                                 let word = builder.ToString()
+                                 printfn "Not a word: %s\n%A" word hand
+                                 stepper d (Map.remove char hand) b
                                  
             | None -> printfn "Char: %A" char
                       None
-
-        stepper realDict hand
+        
+        let builder = StringBuilder()
+        stepper realDict hand builder
 
 
 module Scrabble =
