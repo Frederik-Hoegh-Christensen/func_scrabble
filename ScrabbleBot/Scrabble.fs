@@ -94,29 +94,40 @@ module myMod =
         let realDict = st.dict
         
         
-        let rec stepper dict (charSet:Map<char,int>) (builder: StringBuilder)  = 
-            
-            let char = Map.minKeyValue charSet |> fst
+        let rec stepper dict (charSet:Map<char,int>) (wordList) (wordBuilder: StringBuilder)  = 
+            //let char = Map.minKeyValue charSet |> fst
+            let charList = Map.toList charSet
+            let charPair = charList.Head
+            let char = charList.Head |> fst
             
             match Dictionary.step char dict with
             
             | Some (true, d) -> 
-                                let b = builder.Append(char)
-                                let word = builder.ToString()
-                                printfn "its a word!: %s\n%A" word hand
-                                stepper d (Map.remove char hand) b
+                                let builder = wordBuilder.Append(char)
+                                let word = wordBuilder.ToString()
+                                let updatedWordList = word :: wordList
+                                printfn "its a word!: %s\n%A" word charSet
+                                stepper d (Map.remove char charSet) updatedWordList builder
                                 
             | Some (false, d) -> 
-                                 let b = builder.Append(char)
-                                 let word = builder.ToString()
-                                 printfn "Not a word: %s\n%A" word hand
-                                 stepper d (Map.remove char hand) b
+                                let builder = wordBuilder.Append(char)
+                                let prefix = wordBuilder.ToString()
+                                printfn "Not a word!: %s\n%A" prefix charSet
+                                stepper d (Map.remove char charSet) wordList builder
                                  
             | None -> printfn "Char: %A" char
-                      None
-        
-        let builder = StringBuilder()
-        stepper realDict hand builder
+                      printfn "Wordlist: %A" wordList
+                      
+                      let builder = wordBuilder.Remove(wordBuilder.Length-1 , 1)
+                      let updatedCharSet = charSet.Remove char |> Map.toList
+                      let ucs = List.append updatedCharSet [charPair] |> List.rev |> Map.ofList
+                      printfn "if char in tail? :%A" ucs
+                      stepper dict ucs wordList builder
+                      
+                      
+                      
+            
+        stepper realDict hand List.empty (StringBuilder())
 
 
 module Scrabble =
