@@ -94,40 +94,42 @@ module myMod =
         let realDict = st.dict
         
         
-        let rec stepper dict (charSet:Map<char,int>) (wordList) (wordBuilder: StringBuilder)  = 
+        let rec stepper dict (charSet:Map<char,int>) (wordList) (wordBuilder: StringBuilder) count  = 
             //let char = Map.minKeyValue charSet |> fst
             let charList = Map.toList charSet
             let charPair = charList.Head
-            let char = charList.Head |> fst
+            let char = charList.Item count |> fst
             
-            match Dictionary.step char dict with
+
+            
+            match Dictionary.step (char) dict with
             
             | Some (true, d) -> 
                                 let builder = wordBuilder.Append(char)
                                 let word = wordBuilder.ToString()
                                 let updatedWordList = word :: wordList
                                 printfn "its a word!: %s\n%A" word charSet
-                                stepper d (Map.remove char charSet) updatedWordList builder
+                                stepper d (Map.remove char charSet) updatedWordList builder count
                                 
             | Some (false, d) -> 
                                 let builder = wordBuilder.Append(char)
                                 let prefix = wordBuilder.ToString()
                                 printfn "Not a word!: %s\n%A" prefix charSet
-                                stepper d (Map.remove char charSet) wordList builder
+                                stepper d (Map.remove char charSet) wordList builder count
                                  
             | None -> printfn "Char: %A" char
                       printfn "Wordlist: %A" wordList
                       
                       let builder = wordBuilder.Remove(wordBuilder.Length-1 , 1)
                       let updatedCharSet = charSet.Remove char |> Map.toList
-                      let ucs = List.append updatedCharSet [charPair] |> List.rev |> Map.ofList
+                      let ucs = List.append updatedCharSet [charPair] |> Map.ofList
                       printfn "if char in tail? :%A" ucs
-                      stepper dict ucs wordList builder
+                      stepper dict ucs wordList builder count+1
                       
                       
                       
-            
-        stepper realDict hand List.empty (StringBuilder())
+        for i in 0..hand.Count do
+        stepper realDict hand List.empty (StringBuilder()) i
 
 
 module Scrabble =
