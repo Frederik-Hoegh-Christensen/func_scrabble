@@ -61,6 +61,8 @@ module State =
 
 
 module myMod = 
+
+    
     let charToAlphabetNum (c: char) : uint32 =
         match c with
         | 'a' | 'A' -> uint32 1
@@ -90,18 +92,69 @@ module myMod =
         | 'y' | 'Y' -> uint32 25
         | 'z' | 'Z' -> uint32 26
         | _ -> failwith "Invalid character"
+    type direction =
+        |Right
+        |Down
+        |No
 
-    let makeCoordList (startCoord: (int * int)) (directionDown: bool) (wordLength: int) =
+    let makeCoordList (startCoord: (int * int)) (direction: direction) (wordLength: int) =
         
         let (startX, startY) = startCoord
-        let increment = if directionDown then 1 else 0
-        let xIncrement = if directionDown then 0 else 1
+        let increment = if (direction = Down) then 1 else 0
+        let xIncrement = if direction = Right then 1 else 0
         [for i in 0..wordLength-1 -> (startX + i*xIncrement, startY + i*increment)]
 
+
+    let getPossibleMoves (st:State.state) (wordLength:int) (startCoord:(int*int)) =
+        let board = st.boardS 
+
+        let initRight = makeCoordList startCoord Right wordLength |> List.removeAt 0
+        let (fstX,fstY) = initRight.Item 0
+        let prevRightCoord = (fstX-2, fstY)
+        let listRight = List.append [prevRightCoord] initRight
+
+
+        let initDown = makeCoordList startCoord Down wordLength |> List.removeAt 0 
+        let (fstX,fstY) = initDown.Item 0
+        let prevDownCoord = (fstX, fstY-2)
+        let listDown = List.append [prevDownCoord] initDown
+        let hasKeyDown = List.exists (fun coord -> board.ContainsKey coord) listDown
+        let hasKeyRight = List.exists (fun coord -> board.ContainsKey coord) listRight
+
+        match hasKeyDown, hasKeyRight with 
+        |true,true -> (No, List.empty)
+        | true, false -> (Right, listRight)
+        | false, true -> (Down, listDown)
+        | false, false -> (Down, List.concat [listDown; listRight])
+
+
+        //for coord in listRight do
+        //    if board.Keys.Contains coord then
+        //        for coor in listDown do
+        //            if board.Keys.Contains coor then
+        //                []
+        //            else
+        //                []
+        //    else
+        //        listDown
+
+
+        //for coord in listRight do 
+        //    if board.ContainsKey coord then 
+        //        listDown 
+        //    else 
+                
+        //for coord in listDown do 
+        //    if board.ContainsKey coord then 
+
+        //        listRight 
+        //    else 
+        //        List.empty 
     
 
-    let makeMoveFromStrings (pieces: Map<uint32, tile>) (word:string) (startingCoord: coord) (directionDown:bool) =
-        let coordList = makeCoordList startingCoord directionDown word.Length
+    let makeMoveFromStrings (pieces: Map<uint32, tile>) (word:string) (startingCoord: coord) (direction: direction) =
+        
+        let coordList = makeCoordList startingCoord direction word.Length
         let matchingTiles = 
             [ for c in word do
                 match pieces |> Map.tryFind (charToAlphabetNum c) with
@@ -179,7 +232,7 @@ module myMod =
         let join (p:Map<'a,'b>) (q:Map<'a,'b>) = 
             Map(Seq.concat [ (Map.toSeq p) ; (Map.toSeq q) ])
         let mutable finalWordList = []
-        let mutable myMap = Map.empty
+        let mutable stringToCoordMap = Map.empty
         let boardList = board |> Map.toList
         for i in 0..boardList.Length-1 do
             let c = boardList.Item i |> snd |> fst
@@ -189,15 +242,21 @@ module myMod =
                 Map.ofList [
                 for s in aList -> s, (coord)
                 ]
-            myMap <- join myMap aMap
+            stringToCoordMap <- join stringToCoordMap aMap
             finalWordList <- finalWordList @ aList
-        let fstString =  finalWordList |> List.max
-        let stringCoord = Map.tryFind fstString myMap
-        printfn "stringcoord: %A" stringCoord 
+        let possibleWords = finalWordList
+                            |> List.map (fun word -> (word, getPossibleMoves st word.Length (Map.find word stringToCoordMap)))
+                            |> List.map (fun word  -> (fst word, (snd word |> fst) ))
+                            |> List.filter (fun (_, d) -> d <> No)
+        let (fstString, dir) =  possibleWords |> List.max
+        let stringCoord = Map.tryFind fstString stringToCoordMap
+        printfn "mAXword: %A" fstString
         let acString = fstString.Remove(0,1)
         let (x,y) = stringCoord |> Option.get
         let xx = x+1
-        makeMoveFromStrings pieces (acString) (xx, y) false
+        let asger = (if dir = Down then (x, y+1) else (x+1, y))
+
+        makeMoveFromStrings pieces (acString) asger dir
                    
         
         
@@ -302,7 +361,7 @@ module myMod =
             
         printfn "finalWordList: %A" finalWordList
         let fstString =  finalWordList |> List.max
-        makeMoveFromStrings pieces (fstString) (0,0) true
+        makeMoveFromStrings pieces (fstString) (0,0) Right
         
 
 
