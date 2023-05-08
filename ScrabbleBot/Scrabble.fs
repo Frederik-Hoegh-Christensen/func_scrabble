@@ -92,6 +92,7 @@ module myMod =
         | _ -> failwith "Invalid character"
 
     let makeCoordList (startCoord: (int * int)) (directionDown: bool) (wordLength: int) =
+        
         let (startX, startY) = startCoord
         let increment = if directionDown then 1 else 0
         let xIncrement = if directionDown then 0 else 1
@@ -119,12 +120,117 @@ module myMod =
 
     open MultiSet
     open System.Text
-    let toSet (MS s) =
-        s 
-        |> Map.fold (fun acc (_,b) v -> 
-            let set = Set.ofSeq(Seq.replicate (int v) b)
-            Set.union acc set)
-            Set.empty
+    open System
+    let stepAll (s:string) (dict:Dictionary.Dict) =
+        let mutable newDict = dict
+        for c in s do
+            newDict <- Dictionary.step c newDict |> Option.get |> snd
+        newDict
+    
+    let myMove (st:State.state) (pieces: Map<uint32, tile>) = 
+        let board = st.boardS
+        let realDict = st.dict
+        let hand =
+            pieces
+            |> Map.fold
+                (fun acc k (v) ->
+                    if MultiSet.contains k st.hand then
+                        match v with
+                        |  tile -> 
+                            let charVal = tile |> Set.minElement |> fst
+                            let pointVal = tile |> Set.minElement |> snd
+                            Map.add charVal pointVal acc
+                        
+                    else
+                        acc)
+                Map.empty
+        
+        let rec stepper1 dict (boardChar: char) (hand:Map<char,int>) (builder:StringBuilder) (wordList:string list) =
+            if hand.IsEmpty then
+                        wordList
+            else
+            match Dictionary.step boardChar dict with
+
+            | None ->
+                
+                
+                
+
+                let word = builder.ToString()
+                let newDict = stepAll word realDict
+                let charToBeRemoved = hand |> Map.maxKeyValue |> fst
+                
+                
+                stepper1 newDict charToBeRemoved (hand.Remove charToBeRemoved) builder wordList
+
+            | Some (true, d) ->
+                let newBuilder = builder.Append(boardChar)
+                let word = builder.ToString()
+                let updatedWordList = word :: wordList
+                let charToBeRemoved = (hand |> Map.minKeyValue |> fst)
+                printfn "wordListfrom stepper1 : %A" updatedWordList
+                stepper1 d charToBeRemoved (hand.Remove charToBeRemoved) newBuilder updatedWordList
+
+            | Some (false, d) ->
+                let newBuilder = builder.Append(boardChar)
+                let charToBeRemoved = (hand |> Map.minKeyValue |> fst)
+                stepper1 d charToBeRemoved (hand.Remove charToBeRemoved ) newBuilder wordList
+        
+        let join (p:Map<'a,'b>) (q:Map<'a,'b>) = 
+            Map(Seq.concat [ (Map.toSeq p) ; (Map.toSeq q) ])
+        let mutable finalWordList = []
+        let mutable myMap = Map.empty
+        let boardList = board |> Map.toList
+        for i in 0..boardList.Length-1 do
+            let c = boardList.Item i |> snd |> fst
+            let coord = boardList.Item i |> fst
+            let aList = stepper1 realDict c hand (StringBuilder()) List.empty 
+            let aMap =
+                Map.ofList [
+                for s in aList -> s, (coord)
+                ]
+            myMap <- join myMap aMap
+            finalWordList <- finalWordList @ aList
+        let fstString =  finalWordList |> List.max
+        let stringCoord = Map.tryFind fstString myMap
+        printfn "stringcoord: %A" stringCoord 
+        let acString = fstString.Remove(0,1)
+        let (x,y) = stringCoord |> Option.get
+        let xx = x+1
+        makeMoveFromStrings pieces (acString) (xx, y) false
+                   
+        
+        
+        //stepper1 realDict 'A' hand (StringBuilder()) List.empty
+        //stepper1 realDict 'A' (hand.Remove (hand |> Map.minKeyValue |> fst)) (StringBuilder()) List.empty
+
+                //printfn "Char: %A" char
+                //      printfn "Wordlist: %A" wordList
+                //      if wordBuilder.Length = 0 then 
+                //        wordList
+                //      else
+                //        let builder = wordBuilder.Remove(wordBuilder.Length-1 , 1)
+                //        let updatedCharSet = charSet.Remove char |> Map.toList
+                //        let ucs = List.append updatedCharSet [charPair] |> Map.ofList
+                        
+                //        stepper dict ucs wordList builder count
+                //let builder = wordBuilder.Append(char)
+                //                let word = wordBuilder.ToString()
+                //                let updatedWordList = word :: wordList
+                //                printfn "its a word!: %s\n%A" word charSet
+                //                stepper d (Map.remove char charSet) updatedWordList builder count
+
+                                
+                                
+            //| Some (false, d) -> 
+            //                    let builder = wordBuilder.Append(char)
+            //                    let prefix = wordBuilder.ToString()
+            //                    //printfn "Not a word!: %s\n%A" prefix charSet
+            //                    stepper d (Map.remove char charSet) wordList builder count
+                                 
+            //| None -> printfn "Char: %A" char
+            //          printfn "Wordlist: %A" wordList
+
 
 
     let myFunction<'a> (st: State.state) (pieces: Map<uint32, tile>) =
@@ -174,19 +280,18 @@ module myMod =
             | Some (false, d) -> 
                                 let builder = wordBuilder.Append(char)
                                 let prefix = wordBuilder.ToString()
-                                printfn "Not a word!: %s\n%A" prefix charSet
+                                //printfn "Not a word!: %s\n%A" prefix charSet
                                 stepper d (Map.remove char charSet) wordList builder count
                                  
             | None -> printfn "Char: %A" char
                       printfn "Wordlist: %A" wordList
                       if wordBuilder.Length = 0 then 
-                        //let builder = StringBuilder()
                         wordList
                       else
                         let builder = wordBuilder.Remove(wordBuilder.Length-1 , 1)
                         let updatedCharSet = charSet.Remove char |> Map.toList
                         let ucs = List.append updatedCharSet [charPair] |> Map.ofList
-                        printfn "if char in tail? :%A" ucs
+                        
                         stepper dict ucs wordList builder count
                       
                 
@@ -196,8 +301,8 @@ module myMod =
             finalWordList <- finalWordList @ aList
             
         printfn "finalWordList: %A" finalWordList
-        let fstString =  finalWordList.Head
-        makeMoveFromStrings pieces (fstString) (0,0) false
+        let fstString =  finalWordList |> List.max
+        makeMoveFromStrings pieces (fstString) (0,0) true
         
 
 
@@ -211,9 +316,12 @@ module Scrabble =
         let rec aux (st : State.state) =
             //if st.playerNumber = 1u then printfn "player1moves: %A\n" st.hand
             //if st.playerNumber = 2u then printfn "player2moves: %A" st.hand
-            let myFunc = (myMod.myFunction st pieces) 
-            printfn "mybool: %A" myFunc 
-
+            
+            
+            
+                
+            
+            
             Print.printHand pieces (State.hand st)
             
             
@@ -222,13 +330,24 @@ module Scrabble =
             //printfn "board: %A" st.boardS
             
             let input =  System.Console.ReadLine()
+
             let move = RegEx.parseMove input
-            let myMove = myFunc
+            
+            
             
             
 
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-            send cstream (SMPlay myMove)
+            if st.boardS.IsEmpty then
+                let myFunc = (myMod.myFunction st pieces) 
+                let myMove = myFunc
+                send cstream (SMPlay myMove)
+            else
+                let j = myMod.myMove st pieces
+                send cstream (SMPlay j)
+            
+            
+                //send cstream (SMPlay myMod.myMove st pieces)
 
             let msg = recv cstream
             debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.

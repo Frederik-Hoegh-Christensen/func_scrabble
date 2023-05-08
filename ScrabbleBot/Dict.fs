@@ -50,7 +50,7 @@ module Dictionary
                 match value with
                 | Leaf b -> Some (b, value)
                 | Node (b, v) -> Some (b, value)
-            | (false, _) -> None
+            | (false, v) -> None
         | Leaf _ -> None
 
 
