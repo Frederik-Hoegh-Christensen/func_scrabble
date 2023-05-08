@@ -61,6 +61,62 @@ module State =
 
 
 module myMod = 
+    let charToAlphabetNum (c: char) : uint32 =
+        match c with
+        | 'a' | 'A' -> uint32 1
+        | 'b' | 'B' -> uint32 2
+        | 'c' | 'C' -> uint32 3
+        | 'd' | 'D' -> uint32 4
+        | 'e' | 'E' -> uint32 5
+        | 'f' | 'F' -> uint32 6
+        | 'g' | 'G' -> uint32 7
+        | 'h' | 'H' -> uint32 8
+        | 'i' | 'I' -> uint32 9
+        | 'j' | 'J' -> uint32 10
+        | 'k' | 'K' -> uint32 11
+        | 'l' | 'L' -> uint32 12
+        | 'm' | 'M' -> uint32 13
+        | 'n' | 'N' -> uint32 14
+        | 'o' | 'O' -> uint32 15
+        | 'p' | 'P' -> uint32 16
+        | 'q' | 'Q' -> uint32 17
+        | 'r' | 'R' -> uint32 18
+        | 's' | 'S' -> uint32 19
+        | 't' | 'T' -> uint32 20
+        | 'u' | 'U' -> uint32 21
+        | 'v' | 'V' -> uint32 22
+        | 'w' | 'W' -> uint32 23
+        | 'x' | 'X' -> uint32 24
+        | 'y' | 'Y' -> uint32 25
+        | 'z' | 'Z' -> uint32 26
+        | _ -> failwith "Invalid character"
+
+    let makeCoordList (startCoord: (int * int)) (directionDown: bool) (wordLength: int) =
+        let (startX, startY) = startCoord
+        let increment = if directionDown then 1 else 0
+        let xIncrement = if directionDown then 0 else 1
+        [for i in 0..wordLength-1 -> (startX + i*xIncrement, startY + i*increment)]
+
+    
+
+    let makeMoveFromStrings (pieces: Map<uint32, tile>) (word:string) (startingCoord: coord) (directionDown:bool) =
+        let coordList = makeCoordList startingCoord directionDown word.Length
+        let matchingTiles = 
+            [ for c in word do
+                match pieces |> Map.tryFind (charToAlphabetNum c) with
+                | Some tile -> yield charToAlphabetNum c, Set.minElement tile
+                | None -> () ]
+
+        
+        let combinedList =
+            List.zip coordList matchingTiles|> List.map (fun (coord, tile) -> (coord, tile))
+        combinedList
+    
+
+        
+
+            
+
     open MultiSet
     open System.Text
     let toSet (MS s) =
@@ -95,14 +151,18 @@ module myMod =
         
         
         let rec stepper dict (charSet:Map<char,int>) (wordList) (wordBuilder: StringBuilder) count  = 
+            if count = charSet.Count then
+                wordList
+            else
             //let char = Map.minKeyValue charSet |> fst
             let charList = Map.toList charSet
-            let charPair = charList.Head
+            let charPair = charList.Item count
             let char = charList.Item count |> fst
             
 
             
             match Dictionary.step (char) dict with
+
             
             | Some (true, d) -> 
                                 let builder = wordBuilder.Append(char)
@@ -119,17 +179,27 @@ module myMod =
                                  
             | None -> printfn "Char: %A" char
                       printfn "Wordlist: %A" wordList
+                      if wordBuilder.Length = 0 then 
+                        //let builder = StringBuilder()
+                        wordList
+                      else
+                        let builder = wordBuilder.Remove(wordBuilder.Length-1 , 1)
+                        let updatedCharSet = charSet.Remove char |> Map.toList
+                        let ucs = List.append updatedCharSet [charPair] |> Map.ofList
+                        printfn "if char in tail? :%A" ucs
+                        stepper dict ucs wordList builder count
                       
-                      let builder = wordBuilder.Remove(wordBuilder.Length-1 , 1)
-                      let updatedCharSet = charSet.Remove char |> Map.toList
-                      let ucs = List.append updatedCharSet [charPair] |> Map.ofList
-                      printfn "if char in tail? :%A" ucs
-                      stepper dict ucs wordList builder count+1
-                      
-                      
-                      
+                
+        let mutable finalWordList = []
         for i in 0..hand.Count do
-        stepper realDict hand List.empty (StringBuilder()) i
+            let aList = stepper realDict hand List.empty (StringBuilder()) i 
+            finalWordList <- finalWordList @ aList
+            
+        printfn "finalWordList: %A" finalWordList
+        let fstString =  finalWordList.Head
+        makeMoveFromStrings pieces (fstString) (0,0) false
+        
+
 
 
 module Scrabble =
@@ -141,7 +211,7 @@ module Scrabble =
         let rec aux (st : State.state) =
             //if st.playerNumber = 1u then printfn "player1moves: %A\n" st.hand
             //if st.playerNumber = 2u then printfn "player2moves: %A" st.hand
-            let myFunc = (myMod.myFunction st pieces) |> Option.defaultValue 
+            let myFunc = (myMod.myFunction st pieces) 
             printfn "mybool: %A" myFunc 
 
             Print.printHand pieces (State.hand st)
@@ -153,10 +223,12 @@ module Scrabble =
             
             let input =  System.Console.ReadLine()
             let move = RegEx.parseMove input
+            let myMove = myFunc
+            
             
 
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-            send cstream (SMPlay move)
+            send cstream (SMPlay myMove)
 
             let msg = recv cstream
             debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
