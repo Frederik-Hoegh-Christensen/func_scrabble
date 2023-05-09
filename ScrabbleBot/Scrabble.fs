@@ -104,6 +104,7 @@ module myMod =
         let xIncrement = if direction = Right then 1 else 0
         [for i in 0..wordLength-1 -> (startX + i*xIncrement, startY + i*increment)]
 
+        
 
     let getPossibleMoves (st:State.state) (wordLength:int) (startCoord:(int*int)) =
         let board = st.boardS 
@@ -111,13 +112,26 @@ module myMod =
         let initRight = makeCoordList startCoord Right wordLength |> List.removeAt 0
         let (fstX,fstY) = initRight.Item 0
         let prevRightCoord = (fstX-2, fstY)
-        let listRight = List.append [prevRightCoord] initRight
+        let upperAdjacentRowStartCoord = (fstX, fstY+1)
+        let lowerAdjacentRowStartCoord = (fstX, fstY-1)
+        let (lastWordCoordX, lastWordCoordY) = initRight.Item (initRight.Length-1)
+        let endAdjacentCoordRight = [(lastWordCoordX+1, lastWordCoordY)]
+        let upperAdjacentRow = makeCoordList upperAdjacentRowStartCoord Right (wordLength-1)
+        let lowerAdjacentRow = makeCoordList lowerAdjacentRowStartCoord Right (wordLength-1)
+        let listRight = [prevRightCoord] @ initRight @ upperAdjacentRow @ lowerAdjacentRow @ endAdjacentCoordRight
+
 
 
         let initDown = makeCoordList startCoord Down wordLength |> List.removeAt 0 
         let (fstX,fstY) = initDown.Item 0
         let prevDownCoord = (fstX, fstY-2)
-        let listDown = List.append [prevDownCoord] initDown
+        let leftAdjacentRowStartCoord = (fstX-1, fstY)
+        let rightAdjacentRowStartCoord = (fstX+1, fstY)
+        let (lastWordCoordX, lastWordCoordY) = initRight.Item (initRight.Length-1)
+        let endAdjacentCoordDown = [(lastWordCoordX, lastWordCoordY+1)]
+        let leftAdjacentRow = makeCoordList leftAdjacentRowStartCoord Down (wordLength-1)
+        let rightAdjacentRow = makeCoordList rightAdjacentRowStartCoord Down (wordLength-1)
+        let listDown = [prevDownCoord] @ initDown @ leftAdjacentRow @ rightAdjacentRow @ endAdjacentCoordDown
         let hasKeyDown = List.exists (fun coord -> board.ContainsKey coord) listDown
         let hasKeyRight = List.exists (fun coord -> board.ContainsKey coord) listRight
 
@@ -248,7 +262,7 @@ module myMod =
                             |> List.map (fun word -> (word, getPossibleMoves st word.Length (Map.find word stringToCoordMap)))
                             |> List.map (fun word  -> (fst word, (snd word |> fst) ))
                             |> List.filter (fun (_, d) -> d <> No)
-        let (fstString, dir) =  possibleWords |> List.max
+        let (fstString, dir) =  possibleWords |> List.head
         let stringCoord = Map.tryFind fstString stringToCoordMap
         printfn "mAXword: %A" fstString
         let acString = fstString.Remove(0,1)
