@@ -11,3 +11,16 @@ C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\Scrabble
 C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Debug\net7.0\refint\ScrabbleBot.dll
 C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Debug\net7.0\ScrabbleBot.pdb
 C:\Users\frede\OneDrive\Desktop\functional_programming\ScrabbleTemplate\ScrabbleTemplate\ScrabbleBot\obj\Debug\net7.0\ref\ScrabbleBot.dll
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\bin\Debug\net7.0\ScrabbleBot.deps.json
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\bin\Debug\net7.0\ScrabbleBot.dll
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\bin\Debug\net7.0\ScrabbleBot.pdb
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\bin\Debug\net7.0\ScrabbleUtil.dll
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\obj\Debug\net7.0\ScrabbleBot.fsproj.AssemblyReference.cache
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\obj\Debug\net7.0\ScrabbleBot.AssemblyInfoInputs.cache
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\obj\Debug\net7.0\ScrabbleBot.AssemblyInfo.fs
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\obj\Debug\net7.0\ScrabbleBot.fsproj.CoreCompileInputs.cache
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\obj\Debug\net7.0\ScrabbleBot.fsproj.CopyComplete
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\obj\Debug\net7.0\ScrabbleBot.dll
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\obj\Debug\net7.0\refint\ScrabbleBot.dll
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\obj\Debug\net7.0\ScrabbleBot.pdb
+C:\Users\asger\ITU\4.semester\Funktionel\func_scrabble\ScrabbleBot\obj\Debug\net7.0\ref\ScrabbleBot.dll

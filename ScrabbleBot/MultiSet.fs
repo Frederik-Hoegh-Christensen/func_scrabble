@@ -23,4 +23,7 @@ module internal MultiSet
     let removeSingle key (MS s) = remove key 1u (MS s)
     let fold f acc (MS s) = Map.fold f acc s 
     let foldBack f (MS s) acc  = Map.foldBack f s acc 
+    let toList (multiset: MultiSet<'T>) : 'T list =
+        fold (fun acc key value -> (List.replicate (value |> int) key) @ acc) [] multiset |> List.rev
+
     

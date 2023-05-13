@@ -64,22 +64,23 @@ module myMod =
 
     
     let charToAlphabetNum (c: char) : uint32 =
-        match c with
-        | 'a' | 'A' -> uint32 1
-        | 'b' | 'B' -> uint32 2
-        | 'c' | 'C' -> uint32 3
-        | 'd' | 'D' -> uint32 4
-        | 'e' | 'E' -> uint32 5
-        | 'f' | 'F' -> uint32 6
-        | 'g' | 'G' -> uint32 7
-        | 'h' | 'H' -> uint32 8
-        | 'i' | 'I' -> uint32 9
-        | 'j' | 'J' -> uint32 10
-        | 'k' | 'K' -> uint32 11
-        | 'l' | 'L' -> uint32 12
-        | 'm' | 'M' -> uint32 13
-        | 'n' | 'N' -> uint32 14
-        | 'o' | 'O' -> uint32 15
+        match c with 
+        |_ when System.Char.IsLower c -> uint32 0 
+        | 'A' -> uint32 1
+        | 'B' -> uint32 2
+        | 'C' -> uint32 3
+        | 'D' -> uint32 4
+        | 'E' -> uint32 5
+        | 'F' -> uint32 6
+        | 'G' -> uint32 7
+        | 'H' -> uint32 8
+        | 'I' -> uint32 9
+        | 'J' -> uint32 10
+        | 'K' -> uint32 11
+        | 'L' -> uint32 12
+        | 'M' -> uint32 13
+        | 'N' -> uint32 14
+        | 'O' -> uint32 15
         | 'p' | 'P' -> uint32 16
         | 'q' | 'Q' -> uint32 17
         | 'r' | 'R' -> uint32 18
@@ -92,6 +93,12 @@ module myMod =
         | 'y' | 'Y' -> uint32 25
         | 'z' | 'Z' -> uint32 26
         | _ -> failwith "Invalid character"
+
+    let replaceFirstCharToLower (str: string) =
+             let charArray = str.ToCharArray()
+             charArray.[0] <- System.Char.ToLower(charArray.[0])
+             new string(charArray)
+
     type direction =
         |Right
         |Down
@@ -169,11 +176,18 @@ module myMod =
     let makeMoveFromStrings (pieces: Map<uint32, tile>) (word:string) (startingCoord: coord) (direction: direction) =
         
         let coordList = makeCoordList startingCoord direction word.Length
+
         let matchingTiles = 
-            [ for c in word do
-                match pieces |> Map.tryFind (charToAlphabetNum c) with
-                | Some tile -> yield charToAlphabetNum c, Set.minElement tile
-                | None -> () ]
+            [ for c in word do 
+              match pieces |> Map.tryFind (charToAlphabetNum c) with
+              |Some tile -> 
+                let uintValue = charToAlphabetNum c
+                let pointValue = 
+                    if uintValue = 0u then ((c|>System.Char.ToUpper),0)  else Set.minElement tile  
+                yield uintValue, pointValue 
+                
+              
+              |None -> ()]
 
         
         let combinedList =
@@ -194,6 +208,7 @@ module myMod =
             newDict <- Dictionary.step c newDict |> Option.get |> snd
         newDict
     
+    let mutable alphabet = Set.ofSeq ['A'..'Z']
     let myMove (st:State.state) (pieces: Map<uint32, tile>) = 
         let board = st.boardS
         let realDict = st.dict
@@ -204,17 +219,33 @@ module myMod =
                     if MultiSet.contains k st.hand then
                         match v with
                         |  tile -> 
-                            let charVal = tile |> Set.minElement |> fst
-                            let pointVal = tile |> Set.minElement |> snd
+                            let charVal = 
+                                if k = 0u then 
+                                   
+                                   let Wildcarchar =
+                                        alphabet
+                                        |> Set.minElement
+                                   alphabet  <- alphabet |> Set.remove Wildcarchar
+                                   Wildcarchar
+                                else 
+                                   tile |> Set.minElement |> fst 
+                            let pointVal = 
+                                if k = 0u then 
+                                 0
+                                else 
+                                    tile |> Set.minElement |> snd
                             Map.add charVal pointVal acc
-                        
+                            
                     else
                         acc)
                 Map.empty
+                
+               
         
         let rec stepper1 dict (boardChar: char) (hand:Map<char,int>) (builder:StringBuilder) (wordList:string list) =
             if hand.IsEmpty then
                         wordList
+                         
             else
             match Dictionary.step boardChar dict with
 
@@ -225,7 +256,7 @@ module myMod =
 
                 let word = builder.ToString()
                 let newDict = stepAll word realDict
-                let charToBeRemoved = hand |> Map.maxKeyValue |> fst
+                let charToBeRemoved = hand |> Map.minKeyValue |> fst
                 
                 
                 stepper1 newDict charToBeRemoved (hand.Remove charToBeRemoved) builder wordList
@@ -266,12 +297,21 @@ module myMod =
         let stringCoord = Map.tryFind fstString stringToCoordMap
         printfn "mAXword: %A" fstString
         let acString = fstString.Remove(0,1)
+        //let LowecaseString= acString.Replace('A','a')
+        
+        let superstring = replaceFirstCharToLower acString 
+        
         let (x,y) = stringCoord |> Option.get
         let xx = x+1
         let asger = (if dir = Down then (x, y+1) else (x+1, y))
+        if st.hand |> MultiSet.contains 0u then 
 
-        makeMoveFromStrings pieces (acString) asger dir
-                   
+            makeMoveFromStrings pieces (superstring) asger dir
+        else 
+            makeMoveFromStrings pieces (acString) asger dir 
+
+        
+                  
         
         
         //stepper1 realDict 'A' hand (StringBuilder()) List.empty
@@ -315,16 +355,32 @@ module myMod =
             pieces
             |> Map.fold
                 (fun acc k (v) ->
-                    if MultiSet.contains k handIds then
+                    if MultiSet.contains k st.hand then
                         match v with
                         |  tile -> 
-                            let charVal = tile |> Set.minElement |> fst
-                            let pointVal = tile |> Set.minElement |> snd
+                            let charVal = 
+                                if k = 0u then 
+                                   
+                                   let Wildcarchar =
+                                        alphabet
+                                        |> Set.minElement
+                                   alphabet  <- alphabet |> Set.remove Wildcarchar
+                                   Wildcarchar
+                                
+                                else 
+
+                                   tile |> Set.minElement |> fst 
+                            let pointVal = 
+                                if k = 0u then 
+                                 1
+                                else 
+                                    tile |> Set.minElement |> snd
                             Map.add charVal pointVal acc
                         
                     else
                         acc)
                 Map.empty
+        
 
         let realDict = st.dict
         
@@ -368,14 +424,27 @@ module myMod =
                         stepper dict ucs wordList builder count
                       
                 
-        let mutable finalWordList = []
+        let mutable finalWordList = []     
         for i in 0..hand.Count do
             let aList = stepper realDict hand List.empty (StringBuilder()) i 
             finalWordList <- finalWordList @ aList
             
-        printfn "finalWordList: %A" finalWordList
-        let fstString =  finalWordList |> List.max
-        makeMoveFromStrings pieces (fstString) (0,0) Right
+        printfn "finalWordList: %A" finalWordList 
+        let fstString =  finalWordList |> List.max 
+
+        
+        //let updatehandID(handIds) =
+        //    if handIds |> MultiSet.contains 0u then 
+        //       handIds |> MultiSet.removeSingle 0u |> MultiSet.addSingle 1u 
+        //    else
+        //    handIds 
+
+        if handIds |> MultiSet.contains 0u then 
+
+            let superstring = replaceFirstCharToLower fstString
+            makeMoveFromStrings pieces (superstring) (0,0) Right
+        else 
+            makeMoveFromStrings pieces (fstString) (0,0) Right 
         
 
 
@@ -411,18 +480,36 @@ module Scrabble =
             
 
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-            if st.boardS.IsEmpty then
-                let myFunc = (myMod.myFunction st pieces) 
-                let myMove = myFunc
-                send cstream (SMPlay myMove)
-            else
-                let j = myMod.myMove st pieces
-                send cstream (SMPlay j)
+            //if st.boardS.IsEmpty then
+            //    let myFunc = (myMod.myFunction st pieces) 
+            //    let myMove = myFunc
+            //    send cstream (SMPlay myMove)
+            //else
+            //    let j = myMod.myMove st pieces
+            //    send cstream (SMPlay j)
+
+                
             
             
                 //send cstream (SMPlay myMod.myMove st pieces)
 
+            let myFunc = (myMod.myFunction st pieces) 
+            let myMove = myFunc
+
+            if input = "" then 
+                   
+                    let handlist = MultiSet.toList st.hand
+                    printfn "inside with statemanet"
+                    send cstream (SMChange handlist) 
+                    else 
+                        send cstream (SMPlay myMove)
+            
+             
+            
+
             let msg = recv cstream
+            
+            
             debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             
             match msg with
@@ -452,8 +539,35 @@ module Scrabble =
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
+                
                 let st' = st // This state needs to be updated
                 aux st'
+             |RCM (CMChangeSuccess(newPieces)) ->
+                //let rec addNewGainedTiles (newTiles: (uint32 * uint32) list) (hand: MultiSet.MultiSet<uint32>) =
+                //    //printfn "newtile: %A" newTiles
+                //    match newTiles with
+                //    | [] -> hand
+                //    | h :: t -> addNewGainedTiles t (MultiSet.addSingle (fst h) hand)
+
+                //let newHand = MultiSet.empty
+                //let newHand = addNewGainedTiles newPieces newHand
+
+                //let rm  = 
+                //    newPieces
+                //    |> List.fold (fun acc (x, _) -> MultiSet.remove x 1u acc) st.hand
+                
+                //let handcount = MultiSet.toList st.hand 
+                //for i in 0..(handcount.Length+1) do 
+                //let rm = 
+                //    ms
+                //    |> List.fold (fun acc (c, (ui, (c, i))) -> MultiSet.remove ui 1u acc) st.hand
+                let newHand = 
+                    newPieces
+                    |> List.fold (fun acc (x, y) -> MultiSet.add x y acc) MultiSet.empty
+                printfn "new hand%A" newPieces
+
+                let st' = { st with hand = newHand }
+                aux st' 
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
             | RGPE err -> printfn "Gameplay Error:\n%A\n Boards:%A Move: %A " err st.boardS move; aux st
