@@ -51,7 +51,7 @@ module Dictionary
                 | Leaf b -> Some (b, value)
                 | Node (b, v) -> Some (b, value)
             | (false, v) -> None
-        | Leaf _ -> None
+        | Leaf a -> None
 
 
     //let rec buildInc (c:string) letters dict =
