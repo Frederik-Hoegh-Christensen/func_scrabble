@@ -198,7 +198,7 @@ module myMod =
             newDict <- Dictionary.step c newDict |> Option.get |> snd
         newDict
 
-    let myNewMove (st:State.state) (pieces: Map<uint32, tile>)= 
+    let myNewMove (st:State.state) (pieces: Map<uint32, tile>) (dir:direction) = 
         let ogDict = st.dict
         //let (_, ogDict) = Dictionary.step 'G' ogDict |> Option.get // for debug purpose
         let hand =
@@ -283,78 +283,6 @@ module myMod =
         let fstString = (stepPerm ogDict allPerms Set.empty) |> Set.toList |> List.max
         let move = makeMoveFromStrings pieces (fstString) (0,0) Right
         (move, fstString, Right)
-            
-
-
-        
-
-        //let rec stepNew dict (handList: (char*int) list) (wordSet: string Set) (builder: StringBuilder) (triedWords:string Set) remList =
-        //    //handle empty handlist
-        //    let wordSetCount = wordSet
-        //    if handList.IsEmpty then
-        //        let la = (builder.Chars (builder.Length-1), 1)
-        //        let updatedBuilder = builder.Remove (builder.Length-1, 1)
-        //        let word = updatedBuilder.ToString()
-        //        let updatedHandList = remList @ [la]
-        //        let reDict = stepAll word ogDict
-        //        stepNew reDict updatedHandList wordSet builder triedWords List.empty
-
-
-
-        
-        //    else
-
-        //    let matchChar = handList.Head |> fst
-        //    let matchPair = handList.Head
-        //    let updatedBuilder = builder.Append(matchChar)
-        //    let word = updatedBuilder.ToString()
-            
-        //    if wordSet.Contains word then
-        //        //handle builder being <1? before this
-
-        //        let pairInsert = (builder.Chars (builder.Length-1), 1)
-        //        let updatedHandList = (handList |> List.removeAt 0)
-        //        let updatedBuilder = builder.Remove(builder.Length-1, 1)
-        //        let updatedRemList = remList @ [pairInsert]
-        //        stepNew dict updatedHandList wordSet updatedBuilder triedWords updatedRemList
-        //    elif triedWords.Contains word then
-        //        let pairInsertFirst = (builder.Chars (builder.Length-1), 1)
-        //        let pairInsertSec = (builder.Chars (builder.Length-2), 1)
-        //        let updatedBuilder = builder.Remove (builder.Length-2, 2)
-        //        let updatedHandList = handList @ [pairInsertFirst] @ [pairInsertSec]
-        //        let updatedWord = updatedBuilder.ToString()
-        //        let reDict = stepAll updatedWord ogDict
-        //        stepNew reDict updatedHandList wordSet updatedBuilder triedWords remList
-
-
-        //    else
-            
-            
-        //    match Dictionary.step matchChar dict with
-        //    | Some (true, d) ->
-        //        let word = updatedBuilder.ToString()
-        //        let updatedWordSet = wordSet.Add word
-        //        let updatedTriedWords = triedWords.Add word
-        //        let updatedHandList = (handList |> List.removeAt 0)//check if word is in wordlist? so i dont get multiples and
-        //        //handle what dhould happen after it tries to write a word already here                
-        //        stepNew d updatedHandList updatedWordSet updatedBuilder updatedTriedWords remList
-        //    | Some (false, d) ->
-        //        let updatedHandList = handList |> List.removeAt 0
-        //        //update tried words??
-        //        stepNew d updatedHandList wordSet updatedBuilder triedWords  remList
-                
-        //    | None -> 
-        //        let updatedTriedWords = triedWords.Add word
-        //        let tempHandList = handList |> List.removeAt 0
-        //        let pairInsert = (builder.Chars (builder.Length-1), 1)
-        //        let updatedremList = remList @ [pairInsert]
-        //        let smth = builder.Remove (builder.Length-1, 1)
-        //        let newDict = stepAll (smth.ToString()) ogDict
-        //        stepNew newDict tempHandList wordSet smth updatedTriedWords updatedremList
-        //stepNew ogDict ogHandList Set.empty (StringBuilder()) Set.empty List.empty
-
-            
-
 
 
     let myMove (st:State.state) (pieces: Map<uint32, tile>) = 
@@ -567,19 +495,21 @@ module Scrabble =
             let move = RegEx.parseMove input
             
             let mutable playedWords = []
-            
+            let playInDir = ( if playedWords.Length % 2 = 0 then Right else Down)
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-            if st.boardS.IsEmpty then
-                let myFunc = (myMod.myNewMove st pieces) 
-                let (myMove, playedWord, dir) = myFunc
-                let lastCoord = (myMove.Item (myMove.Length-1) |> fst)
-                playedWords <- playedWords @ [(playedWord, lastCoord, dir)]
-                send cstream (SMPlay myMove)
-            else
-                let (notFirstMove, playedWord, dir) = (myMod.myMove st pieces) |> Option.get
-                let lastCoord = (notFirstMove.Item (notFirstMove.Length-1) |> fst)
-                playedWords <- playedWords @ [(playedWord, lastCoord, dir)]
-                send cstream (SMPlay notFirstMove)
+            let (myMove, _, _) = (myMod.myNewMove st pieces playInDir)
+            send cstream (SMPlay myMove)
+            //if st.boardS.IsEmpty then
+            //    let myFunc = (myMod.myNewMove st pieces Right) 
+            //    let (myMove, playedWord, dir) = myFunc
+            //    let lastCoord = (myMove.Item (myMove.Length-1) |> fst)
+            //    playedWords <- playedWords @ [(playedWord, lastCoord, dir)]
+            //    send cstream (SMPlay myMove)
+            //else
+            //    let (notFirstMove, playedWord, dir) = (myMod.myMove st pieces) |> Option.get
+            //    let lastCoord = (notFirstMove.Item (notFirstMove.Length-1) |> fst)
+            //    playedWords <- playedWords @ [(playedWord, lastCoord, dir)]
+            //    send cstream (SMPlay notFirstMove)
             
             
                 //send cstream (SMPlay myMod.myMove st pieces)
