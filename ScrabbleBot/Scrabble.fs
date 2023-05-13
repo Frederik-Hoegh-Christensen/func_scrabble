@@ -53,10 +53,11 @@ module State =
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
         boardS        : Map<coord, char * int>
-        words         : (string*coord*direction) list
+        wordsPlayed         : int
+        lastPlayedCoord : (int*int)
     }
 
-    let mkState b d pn h bs = {board = b; dict = d; playerNumber = pn; hand = h; boardS = bs; words = List.empty }
+    let mkState b d pn h bs = {board = b; dict = d; playerNumber = pn; hand = h; boardS = bs; wordsPlayed = 0; lastPlayedCoord = (0,0) }
 
     let board st         = st.board
     let dict st          = st.dict
@@ -104,9 +105,14 @@ module myMod =
     let makeCoordList (startCoord: (int * int)) (direction: direction) (wordLength: int) =
         
         let (startX, startY) = startCoord
-        let yincrement = if (direction = Down) then 1 else 0
-        let xIncrement = if direction = Right then 1 else 0
-        [for i in 0..wordLength-1 -> (startX + i*xIncrement, startY + i*yincrement)]
+        
+
+        if direction = Down then
+            [for i in 0..wordLength-1 -> (startX , startY + i)]
+        elif direction = Right then
+            [for i in 0..wordLength-1 -> (startX + i , startY)]
+        else
+            List.empty
 
     let canAppendWord (st:State.state) (wordLength:int) (startCoord:(int*int)) (dir:direction) =
         let board = st.boardS
@@ -173,9 +179,10 @@ module myMod =
             [ for c in word do
                 match pieces |> Map.tryFind (charToAlphabetNum c) with
                 | Some tile -> yield charToAlphabetNum c, Set.minElement tile
-                | None -> () ]
+                | None -> () ] 
 
-        
+
+        let revMatchingTiles = List.rev matchingTiles
         let combinedList =
             List.zip coordList matchingTiles|> List.map (fun (coord, tile) -> (coord, tile))
         combinedList
@@ -198,8 +205,13 @@ module myMod =
             newDict <- Dictionary.step c newDict |> Option.get |> snd
         newDict
 
-    let myNewMove (st:State.state) (pieces: Map<uint32, tile>) (dir:direction) = 
-        let ogDict = st.dict
+    let myNewMove (st:State.state) (pieces: Map<uint32, tile>) (dir:direction) (coord: (int*int))= 
+        let x = fst coord
+        let y = snd coord 
+        let acCoord = (if dir = Right then (x+1, y) else (x, y+1))
+        let dictChar = (st.boardS |> Map.tryFind coord) 
+        let ogDict = (if st.boardS.IsEmpty then st.dict else (Dictionary.step (st.boardS |> Map.find coord |> fst) st.dict |> Option.get |> snd))
+
         //let (_, ogDict) = Dictionary.step 'G' ogDict |> Option.get // for debug purpose
         let hand =
             pieces
@@ -235,7 +247,6 @@ module myMod =
                     |> List.map (fun s -> string x + s)
                 )
         let allPerms = permuteListToStrings ogHandListChars
-        
         let rec stepWord dict (word: string) (wordSet: string Set) (builder: StringBuilder) =
             let w = word
             if word.Length = 0 then
@@ -281,8 +292,12 @@ module myMod =
                 stepPerm ogDict updatedCheckWords wordSet
 
         let fstString = (stepPerm ogDict allPerms Set.empty) |> Set.toList |> List.max
-        let move = makeMoveFromStrings pieces (fstString) (0,0) Right
-        (move, fstString, Right)
+        let firstMove = makeMoveFromStrings pieces (fstString) coord dir
+        let moveElse = makeMoveFromStrings pieces (fstString) acCoord dir
+        if st.wordsPlayed = 0 then
+            firstMove
+        else
+        moveElse
 
 
     let myMove (st:State.state) (pieces: Map<uint32, tile>) = 
@@ -493,11 +508,16 @@ module Scrabble =
             let input =  System.Console.ReadLine()
 
             let move = RegEx.parseMove input
+            let lastCoordinate = st.lastPlayedCoord
             
-            let mutable playedWords = []
-            let playInDir = ( if playedWords.Length % 2 = 0 then Right else Down)
+            
+            let playInDir = ( if st.wordsPlayed % 2 = 0 then Right else Down)
+
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-            let (myMove, _, _) = (myMod.myNewMove st pieces playInDir)
+            let (myMove) = (myMod.myNewMove st pieces playInDir lastCoordinate) 
+            let newXCoord = fst (myMove.Item (myMove.Length-1)) |> fst
+            let newYCoord = fst (myMove.Item (myMove.Length-1)) |> snd
+            let newLastCoord = (newXCoord, newYCoord)
             send cstream (SMPlay myMove)
             //if st.boardS.IsEmpty then
             //    let myFunc = (myMod.myNewMove st pieces Right) 
@@ -532,7 +552,7 @@ module Scrabble =
                 let updatedBoardState = List.fold(fun acc (coord,(_, (x,y))) -> Map.add coord (x,y) acc ) st.boardS ms
                 
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = {st with hand = addPiecesList; boardS = updatedBoardState; words = playedWords} // This state needs to be updated
+                let st' = {st with hand = addPiecesList; boardS = updatedBoardState; wordsPlayed = st.wordsPlayed + 1; lastPlayedCoord = newLastCoord} // This state needs to be updated
                 
                 //printfn "multiset: rm: %A" rm
                 
