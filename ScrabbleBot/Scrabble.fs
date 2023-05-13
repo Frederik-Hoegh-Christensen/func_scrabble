@@ -200,7 +200,7 @@ module myMod =
 
     let myNewMove (st:State.state) (pieces: Map<uint32, tile>)= 
         let ogDict = st.dict
-        let (_, ogDict) = Dictionary.step 'G' ogDict |> Option.get // for debug purpose
+        //let (_, ogDict) = Dictionary.step 'G' ogDict |> Option.get // for debug purpose
         let hand =
             pieces
             |> Map.fold
@@ -235,7 +235,57 @@ module myMod =
                     |> List.map (fun s -> string x + s)
                 )
         let allPerms = permuteListToStrings ogHandListChars
-        allPerms
+        
+        let rec stepWord dict (word: string) (wordSet: string Set) (builder: StringBuilder) =
+            let w = word
+            if word.Length = 0 then
+                Some wordSet
+            else
+            let wordToChars = word.ToCharArray()
+            let firstChar = wordToChars |> Array.head
+            match Dictionary.step firstChar dict with
+            | Some (false, d) -> 
+                let updatedBuilder = builder.Append(firstChar)
+                let remOfWord = new string (wordToChars |> Array.removeAt(0))
+                stepWord d remOfWord wordSet updatedBuilder
+                
+            | Some (true, d) ->
+                let updatedBuilder = builder.Append(firstChar)
+                let acWord = updatedBuilder.ToString()
+                let updatedWordSet = wordSet.Add(acWord)
+                let remOfWord = new string (wordToChars |> Array.removeAt(0))
+                stepWord d remOfWord updatedWordSet updatedBuilder
+
+
+            | None -> 
+                if wordSet.IsEmpty then
+                    None
+                else
+                    Some wordSet
+                
+
+
+            
+        let rec stepPerm dict (checkWords: string list) (wordSet: string Set) = 
+            if checkWords.Length = 0 then
+                let i = wordSet
+                wordSet
+            else
+            let word = checkWords |> List.head
+            let updatedCheckWords = checkWords |> List.removeAt(0)
+            match stepWord dict word Set.empty (StringBuilder()) with 
+            | Some (words) ->
+                let updatedWordSet = words |> Set.union wordSet
+                stepPerm ogDict updatedCheckWords updatedWordSet
+            | None ->
+                stepPerm ogDict updatedCheckWords wordSet
+
+        let fstString = (stepPerm ogDict allPerms Set.empty) |> Set.toList |> List.max
+        let move = makeMoveFromStrings pieces (fstString) (0,0) Right
+        (move, fstString, Right)
+            
+
+
         
 
         //let rec stepNew dict (handList: (char*int) list) (wordSet: string Set) (builder: StringBuilder) (triedWords:string Set) remList =
@@ -520,7 +570,7 @@ module Scrabble =
             
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             if st.boardS.IsEmpty then
-                let myFunc = (myMod.myFunction st pieces) 
+                let myFunc = (myMod.myNewMove st pieces) 
                 let (myMove, playedWord, dir) = myFunc
                 let lastCoord = (myMove.Item (myMove.Length-1) |> fst)
                 playedWords <- playedWords @ [(playedWord, lastCoord, dir)]
