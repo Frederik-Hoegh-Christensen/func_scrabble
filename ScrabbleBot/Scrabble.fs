@@ -178,7 +178,11 @@ module myMod =
         let matchingTiles = 
             [ for c in word do
                 match pieces |> Map.tryFind (charToAlphabetNum c) with
-                | Some tile -> yield charToAlphabetNum c, Set.minElement tile
+                | Some tile -> 
+                    if (Set.minElement tile |> snd) = 0 then
+                        yield 0u, ('E', 0)
+                    else
+                        yield charToAlphabetNum c, Set.minElement tile
                 | None -> () ] 
 
 
@@ -187,14 +191,7 @@ module myMod =
             List.zip coordList matchingTiles|> List.map (fun (coord, tile) -> (coord, tile))
         combinedList
     
-    let removeTuples (word: string) (lst: (char * int) list) =
-        lst |> List.filter (fun (c, _) -> not (word.Contains(c.ToString())))
-        
-    let rotateList (list: 'a list) : 'a list =
-        match list with
-        | [] -> list
-        | x :: xs -> List.append xs [x]
-            
+    
 
     open MultiSet
     open System.Text
@@ -222,6 +219,10 @@ module myMod =
                         |  tile -> 
                             let charVal = tile |> Set.minElement |> fst
                             let pointVal = tile |> Set.minElement |> snd
+                            
+                            if pointVal = 0 then
+                                Map.add 'E' pointVal acc
+                            else
                             Map.add charVal pointVal acc
                         
                     else
@@ -290,14 +291,17 @@ module myMod =
                 stepPerm ogDict updatedCheckWords updatedWordSet
             | None ->
                 stepPerm ogDict updatedCheckWords wordSet
-
-        let fstString = (stepPerm ogDict allPerms Set.empty) |> Set.toList |> List.max
+        let allStrings = (stepPerm ogDict allPerms Set.empty)
+        if allStrings.IsEmpty then
+            None
+        else
+        let fstString = allStrings |> Set.toList |> List.max
         let firstMove = makeMoveFromStrings pieces (fstString) coord dir
         let moveElse = makeMoveFromStrings pieces (fstString) acCoord dir
         if st.wordsPlayed = 0 then
-            firstMove
+            Some firstMove
         else
-        moveElse
+        Some moveElse
 
 
     let myMove (st:State.state) (pieces: Map<uint32, tile>) = 
@@ -512,13 +516,34 @@ module Scrabble =
             
             
             let playInDir = ( if st.wordsPlayed % 2 = 0 then Right else Down)
-
+            let mutable newLastCoord = (0,0)
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             let (myMove) = (myMod.myNewMove st pieces playInDir lastCoordinate) 
-            let newXCoord = fst (myMove.Item (myMove.Length-1)) |> fst
-            let newYCoord = fst (myMove.Item (myMove.Length-1)) |> snd
-            let newLastCoord = (newXCoord, newYCoord)
-            send cstream (SMPlay myMove)
+            match myMove with
+            | Some move -> 
+                let newXCoord = fst (move.Item (move.Length-1)) |> fst
+                let newYCoord = fst (move.Item (move.Length-1)) |> snd
+                newLastCoord <- (newXCoord, newYCoord)
+                send cstream (SMPlay move)
+            | None -> 
+                let changeTiles = (pieces |> Map.toList) |> List.fold (fun acc (k, v) -> k :: acc ) []
+                    
+
+                send cstream (SMChange (changeTiles))
+            //let hand =
+            //pieces
+            //|> Map.fold
+            //    (fun acc k (v) ->
+            //        if MultiSet.contains k st.hand then
+            //            match v with
+            //            |  tile -> 
+            //                let charVal = tile |> Set.minElement |> fst
+            //                let pointVal = tile |> Set.minElement |> snd
+            //                Map.add charVal pointVal acc
+                        
+            //        else
+            //            acc)
+            //    Map.empty
             //if st.boardS.IsEmpty then
             //    let myFunc = (myMod.myNewMove st pieces Right) 
             //    let (myMove, playedWord, dir) = myFunc
@@ -552,7 +577,7 @@ module Scrabble =
                 let updatedBoardState = List.fold(fun acc (coord,(_, (x,y))) -> Map.add coord (x,y) acc ) st.boardS ms
                 
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = {st with hand = addPiecesList; boardS = updatedBoardState; wordsPlayed = st.wordsPlayed + 1; lastPlayedCoord = newLastCoord} // This state needs to be updated
+                let st' = {st with hand = addPiecesList;boardS = updatedBoardState; wordsPlayed = st.wordsPlayed + 1; lastPlayedCoord = newLastCoord} // This state needs to be updated
                 
                 //printfn "multiset: rm: %A" rm
                 
@@ -567,6 +592,8 @@ module Scrabble =
                 let st' = st // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
+            //| RCM (CMChangeSuccess newHand) -> 
+            //    ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
             | RGPE err -> printfn "Gameplay Error:\n%A\n Boards:%A Move: %A " err st.boardS move; aux st
 
