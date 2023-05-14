@@ -23,4 +23,20 @@ module internal MultiSet
     let removeSingle key (MS s) = remove key 1u (MS s)
     let fold f acc (MS s) = Map.fold f acc s 
     let foldBack f (MS s) acc  = Map.foldBack f s acc 
+    let toList (multiset: MultiSet<'T>) : 'T list =
+        fold (fun acc key value -> (List.replicate (value |> int) key) @ acc) [] multiset |> List.rev
+    //let removeFirst (num:uint32)  (s:MultiSet<uint32>) = let setTolist = toList  s 
+    //                                                     let removeOne = setTolist |> List.removeManyAt 0 (int num) 
+    //                                                     let SetOne = Map.ofList 
+    //                                                     MS SetOne 
+    let listToMultiset (values: uint32 list) =
+        let mutable multiset = Map.empty
+
+        for value in values do
+            match multiset.TryFind value with
+            | Some count -> multiset <- multiset.Add(value, count + 1u)
+            | None -> multiset <- multiset.Add(value, 1u)
+
+        MS multiset
+    
     

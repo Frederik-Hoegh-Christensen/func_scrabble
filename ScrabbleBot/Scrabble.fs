@@ -71,34 +71,35 @@ module myMod =
     let first (x, y, z) = x
     let second (x, y, z) = y
     let third (x, y, z) = z
-    let charToAlphabetNum (c: char) : uint32 =
+    let charToAlphabetNum (c: char) : uint32*(char*int)  =
         match c with
-        | 'a' | 'A' -> uint32 1
-        | 'b' | 'B' -> uint32 2
-        | 'c' | 'C' -> uint32 3
-        | 'd' | 'D' -> uint32 4
-        | 'e' | 'E' -> uint32 5
-        | 'f' | 'F' -> uint32 6
-        | 'g' | 'G' -> uint32 7
-        | 'h' | 'H' -> uint32 8
-        | 'i' | 'I' -> uint32 9
-        | 'j' | 'J' -> uint32 10
-        | 'k' | 'K' -> uint32 11
-        | 'l' | 'L' -> uint32 12
-        | 'm' | 'M' -> uint32 13
-        | 'n' | 'N' -> uint32 14
-        | 'o' | 'O' -> uint32 15
-        | 'p' | 'P' -> uint32 16
-        | 'q' | 'Q' -> uint32 17
-        | 'r' | 'R' -> uint32 18
-        | 's' | 'S' -> uint32 19
-        | 't' | 'T' -> uint32 20
-        | 'u' | 'U' -> uint32 21
-        | 'v' | 'V' -> uint32 22
-        | 'w' | 'W' -> uint32 23
-        | 'x' | 'X' -> uint32 24
-        | 'y' | 'Y' -> uint32 25
-        | 'z' | 'Z' -> uint32 26
+        |'e' -> (0u, ('E', 0))
+        | 'a' | 'A' -> (1u ,('A', 1))
+        | 'b' | 'B' -> (2u, ('B', 3))
+        | 'c' | 'C' -> (3u, ('C', 3))
+        | 'd' | 'D' -> (4u, ('D', 2))
+        | 'E' -> (5u, ('E', 1))
+        | 'f' | 'F' -> (6u, ('F', 4))
+        | 'g' | 'G' -> (7u, ('G', 2))
+        | 'h' | 'H' -> (8u, ('H', 4))
+        | 'i' | 'I' -> (9u, ('I', 1))
+        | 'j' | 'J' -> (10u, ('J', 8))
+        | 'k' | 'K' -> (11u, ('K', 5))
+        | 'l' | 'L' -> (12u, ('L', 1))
+        | 'm' | 'M' -> (13u, ('M', 3))
+        | 'n' | 'N' -> (14u, ('N', 1))
+        | 'o' | 'O' -> (15u, ('O', 1))
+        | 'p' | 'P' -> (16u, ('P', 3))
+        | 'q' | 'Q' -> (17u, ('Q', 10))
+        | 'r' | 'R' -> (18u, ('R', 1))
+        | 's' | 'S' -> (19u, ('S', 1))
+        | 't' | 'T' -> (20u, ('T', 1))
+        | 'u' | 'U' -> (21u, ('U', 1))
+        | 'v' | 'V' -> (22u, ('V', 4))
+        | 'w' | 'W' -> (23u, ('W', 4))
+        | 'x' | 'X' -> (24u, ('X', 8))
+        | 'y' | 'Y' -> (25u, ('Y', 4))
+        | 'z' | 'Z' -> (26u, ('Z', 10))
         | _ -> failwith "Invalid character"
     
 
@@ -172,18 +173,18 @@ module myMod =
 
     
 
-    let makeMoveFromStrings (pieces: Map<uint32, tile>) (word:string) (startingCoord: coord) (direction: direction) =
+    let makeMoveFromStrings (st:State.state) (word:string) (startingCoord: coord) (direction: direction) =
         
+        let hand = st.hand
         let coordList = makeCoordList startingCoord direction word.Length
         let matchingTiles = 
             [ for c in word do
-                match pieces |> Map.tryFind (charToAlphabetNum c) with
-                | Some tile -> 
-                    if (Set.minElement tile |> snd) = 0 then
-                        yield 0u, ('E', 0)
-                    else
-                        yield charToAlphabetNum c, Set.minElement tile
-                | None -> () ] 
+                match hand |> MultiSet.contains (charToAlphabetNum c |> fst) with
+                | true -> 
+                    yield charToAlphabetNum c 
+                    
+                
+                | false -> () ] 
 
 
         let revMatchingTiles = List.rev matchingTiles
@@ -221,7 +222,7 @@ module myMod =
                             let pointVal = tile |> Set.minElement |> snd
                             
                             if pointVal = 0 then
-                                Map.add 'E' pointVal acc
+                                Map.add 'e' pointVal acc
                             else
                             Map.add charVal pointVal acc
                         
@@ -296,8 +297,8 @@ module myMod =
             None
         else
         let fstString = allStrings |> Set.toList |> List.max
-        let firstMove = makeMoveFromStrings pieces (fstString) coord dir
-        let moveElse = makeMoveFromStrings pieces (fstString) acCoord dir
+        let firstMove = makeMoveFromStrings st (fstString) coord dir
+        let moveElse = makeMoveFromStrings st (fstString) acCoord dir
         if st.wordsPlayed = 0 then
             Some firstMove
         else
@@ -405,7 +406,7 @@ module myMod =
         let (x,y) = stringCoord |> Option.get
         let startCoord = (if dir = Down then (x, y+1) else (x+1, y))
 
-        let move = makeMoveFromStrings pieces (acString) startCoord dir
+        let move = makeMoveFromStrings st (acString) startCoord dir
         
         Some (move, fstString, dir)
                    
@@ -486,7 +487,7 @@ module myMod =
             
         printfn "finalWordList: %A" finalWordList
         let fstString =  finalWordList |> List.max
-        let move = makeMoveFromStrings pieces (fstString) (0,0) Right
+        let move = makeMoveFromStrings st (fstString) (0,0) Right
         (move, fstString, Right)
         
 
@@ -526,10 +527,12 @@ module Scrabble =
                 newLastCoord <- (newXCoord, newYCoord)
                 send cstream (SMPlay move)
             | None -> 
-                let changeTiles = (pieces |> Map.toList) |> List.fold (fun acc (k, v) -> k :: acc ) []
+                let handlist = MultiSet.toList st.hand 
+                send cstream (SMChange handlist)
+                                //let changeTiles = (pieces |> Map.toList) |> List.fold (fun acc (k, v) -> k :: acc ) []
                     
 
-                send cstream (SMChange (changeTiles))
+                //send cstream (SMChange (changeTiles))
             //let hand =
             //pieces
             //|> Map.fold
@@ -572,7 +575,7 @@ module Scrabble =
 
                 let addPiecesList = 
                     newPieces
-                    |> List.fold (fun acc (x, _) -> MultiSet.add x 1u acc) rm
+                    |> List.fold (fun acc (x, y) -> MultiSet.add x y acc) rm
                 printfn "before board: %A" st.boardS
                 let updatedBoardState = List.fold(fun acc (coord,(_, (x,y))) -> Map.add coord (x,y) acc ) st.boardS ms
                 
@@ -587,15 +590,54 @@ module Scrabble =
                 let updatedBoardState = List.fold(fun acc (coord,(_, (x,y))) -> Map.add coord (x,y) acc ) st.boardS ms
                 let st' = {st with boardS = updatedBoardState}// This state needs to be updated
                 aux st'
+            |RCM (CMChangeSuccess(newPieces)) ->
+                //let rec addNewGainedTiles (newTiles: (uint32 * uint32) list) (hand: MultiSet.MultiSet<uint32>) =
+                //    //printfn "newtile: %A" newTiles
+                //    match newTiles with
+                //    | [] -> hand
+                //    | h :: t -> addNewGainedTiles t (MultiSet.addSingle (fst h) hand)
+
+                //let newHand = MultiSet.empty
+                //let newHand = addNewGainedTiles newPieces newHand
+
+                //let rm  = 
+                //    newPieces
+                //    |> List.fold (fun acc (x, _) -> MultiSet.remove x 1u acc) st.hand
+                
+                //let handcount = MultiSet.toList st.hand 
+                //for i in 0..(handcount.Length+1) do 
+                //let rm = 
+                //    ms
+                //    |> List.fold (fun acc (c, (ui, (c, i))) -> MultiSet.remove ui 1u acc) st.hand
+                let newHand = 
+                    newPieces
+                    |> List.fold (fun acc (x, y) -> MultiSet.add x y acc) MultiSet.empty
+                printfn "new hand%A" newPieces
+
+                let st' = { st with hand = newHand }
+                aux st' 
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
                 let st' = st // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
             //| RCM (CMChangeSuccess newHand) -> 
-            //    ()
+            // 
+            
+                        
             | RCM a -> failwith (sprintf "not implmented: %A" a)
-            | RGPE err -> printfn "Gameplay Error:\n%A\n Boards:%A Move: %A " err st.boardS move; aux st
+            |RGPE err ->
+                    match err with 
+                    | [GPENotEnoughPieces(a,b)] -> 
+                     let diff = a-b 
+                     let Newhand = MultiSet.toList st.hand |> List.removeManyAt 0 (int diff)
+                     let newHandSet = MultiSet.listToMultiset Newhand              
+
+                     let st' = {st with hand = newHandSet }
+                     aux st' 
+                     |_ -> printfn "Gameplay Error:\n%A\n Boards:%A Move: %A " err st.boardS move; aux st
+
+            
 
 
         aux st
