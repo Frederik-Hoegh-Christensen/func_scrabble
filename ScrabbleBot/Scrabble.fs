@@ -115,63 +115,6 @@ module myMod =
         else
             List.empty
 
-    let canAppendWord (st:State.state) (wordLength:int) (startCoord:(int*int)) (dir:direction) =
-        let board = st.boardS
-        let (startX, startY) = startCoord
-        let startOne = (if dir = Right then (startX, startY+1) else (startX+1, startY))
-        let startTwo = (if dir = Right then (startX, startY-1) else (startX-1, startY))
-        let coordList = makeCoordList startCoord dir wordLength
-        let (lastCoordx, lastCoordY) = (coordList.Item (coordList.Length-1))
-        let coordListOne = makeCoordList startOne dir wordLength
-        let coordListTwo = makeCoordList startTwo dir wordLength
-        let lastCoord = (if dir = Right then (lastCoordx+1, lastCoordY) else (lastCoordx, lastCoordY-1))
-        let boardHasKey = List.exists (fun coord -> board.ContainsKey coord) (coordList @ coordListOne @ coordListTwo @[lastCoord])
-        boardHasKey
-
-
-    
-    let getPossibleMoves (st:State.state) (wordLength:int) (startCoord:(int*int)) =
-        let board = st.boardS 
-        
-
-        let initRight = (makeCoordList startCoord Right wordLength) |> List.removeAt 0
-        let (fstX,fstY) = initRight.Item 0
-        let prevRightCoord = (fstX-2, fstY)
-        let upperAdjacentRowStartCoord = (fstX, fstY+1)
-        let lowerAdjacentRowStartCoord = (fstX, fstY-1)
-        let (lastWordCoordX, lastWordCoordY) = initRight.Item (initRight.Length-1)
-        let endAdjacentCoordRight = [(lastWordCoordX+1, lastWordCoordY)]
-        let upperAdjacentRow = makeCoordList upperAdjacentRowStartCoord Right (wordLength-1)
-        let lowerAdjacentRow = makeCoordList lowerAdjacentRowStartCoord Right (wordLength-1)
-        let listRight = [prevRightCoord] @initRight @ upperAdjacentRow @ lowerAdjacentRow @ endAdjacentCoordRight
-
-        
-
-
-
-        let initDown = makeCoordList startCoord Down wordLength |> List.removeAt 0 
-        let (fstX,fstY) = initDown.Item 0
-        let prevDownCoord = (fstX, fstY-2)
-        let leftAdjacentRowStartCoord = (fstX-1, fstY)
-        let rightAdjacentRowStartCoord = (fstX+1, fstY)
-        let (lastWordCoordX, lastWordCoordY) = initRight.Item (initRight.Length-1)
-        let endAdjacentCoordDown = [(lastWordCoordX, lastWordCoordY-1)]
-        let leftAdjacentRow = makeCoordList leftAdjacentRowStartCoord Down (wordLength-1)
-        let rightAdjacentRow = makeCoordList rightAdjacentRowStartCoord Down (wordLength-1)
-
-        let listDown = [prevDownCoord] @ initDown @ leftAdjacentRow @ rightAdjacentRow @ endAdjacentCoordDown
-
-
-        let hasKeyDown = List.exists (fun coord -> board.ContainsKey coord) listDown
-        let hasKeyRight = List.exists (fun coord -> board.ContainsKey coord) listRight
-
-        match hasKeyDown, hasKeyRight with 
-        |true,true -> (No, List.empty)
-        | true, false -> (Right, listRight)
-        | false, true -> (Down, listDown)
-        | false, false -> (Down, List.concat [listDown; listRight])
-
-    
 
     let makeMoveFromStrings (st:State.state) (word:string) (startingCoord: coord) (direction: direction) =
         
@@ -187,16 +130,13 @@ module myMod =
                 | false -> () ] 
 
 
-        let revMatchingTiles = List.rev matchingTiles
         let combinedList =
             List.zip coordList matchingTiles|> List.map (fun (coord, tile) -> (coord, tile))
         combinedList
     
     
 
-    open MultiSet
     open System.Text
-    open System
     let stepAll (s:string) (dict:Dictionary.Dict) =
         let mutable newDict = dict
         for c in s do
@@ -275,10 +215,8 @@ module myMod =
                     None
                 else
                     Some wordSet
-                
 
 
-            
         let rec stepPerm dict (checkWords: string list) (wordSet: string Set) = 
             if checkWords.Length = 0 then
                 let i = wordSet
@@ -305,192 +243,6 @@ module myMod =
         Some moveElse
 
 
-    let myMove (st:State.state) (pieces: Map<uint32, tile>) = 
-        let board = st.boardS
-        let realDict = st.dict
-        let hand =
-            pieces
-            |> Map.fold
-                (fun acc k (v) ->
-                    if MultiSet.contains k st.hand then
-                        match v with
-                        |  tile -> 
-                            let charVal = tile |> Set.minElement |> fst
-                            let pointVal = tile |> Set.minElement |> snd
-                            Map.add charVal pointVal acc
-                        
-                    else
-                        acc)
-                Map.empty
-        
-        let rec stepper1 dict (boardChar: char) (hand:Map<char,int>) (builder:StringBuilder) (wordList:string list) =
-            if hand.IsEmpty then
-                        wordList
-            else
-            match Dictionary.step boardChar dict with
-
-            | None ->
-                let word = builder.ToString()
-                let newDict = stepAll word st.dict
-                let charToBeRemoved = hand |> Map.maxKeyValue |> fst
-                
-                
-                stepper1 newDict charToBeRemoved (hand.Remove charToBeRemoved) builder wordList
-
-            | Some (true, d) ->
-                let newBuilder = builder.Append(boardChar)
-                let word = builder.ToString()
-                let updatedWordList = word :: wordList
-                let charToBeRemoved = (hand |> Map.minKeyValue |> fst)
-                printfn "wordListfrom stepper1 : %A" updatedWordList
-                stepper1 d charToBeRemoved (hand.Remove charToBeRemoved) newBuilder updatedWordList
-
-            | Some (false, d) ->
-                let newBuilder = builder.Append(boardChar)
-                let charToBeRemoved = (hand |> Map.minKeyValue |> fst)
-                stepper1 d charToBeRemoved (hand.Remove charToBeRemoved ) newBuilder wordList
-        
-        let join (p:Map<'a,'b>) (q:Map<'a,'b>) = 
-            Map(Seq.concat [ (Map.toSeq p) ; (Map.toSeq q) ])
-        let mutable finalWordList = []
-        let mutable stringToCoordMap = Map.empty
-        let boardList = board |> Map.toList
-        //for i in 0..st.words.Length do
-        //    let wordTripFromState = st.words.Item i
-        //    let wordFromState = first wordTripFromState 
-        //    let wordDict = stepAll wordFromState realDict
-        //    let charToBeRemoved = (Map.minKeyValue hand |> fst)
-        //    let appendOnWordList = stepper1 wordDict charToBeRemoved (hand.Remove charToBeRemoved) (StringBuilder().Append (wordFromState)) List.empty
-        //    let theWord = List.tryHead appendOnWordList
-            //match theWord with
-            //    |Some -> 
-            //        let wordToBeWritten = (theWord |> Option.get).Remove(0,wordFromState.Length)
-            //        let dir = third wordTripFromState
-            //        let (x, y) = second wordTripFromState
-            //        let theStartCoord = (if dir = Down then (x, y+1) else (x+1, y))
-            //        let theMoveFromLongWord = makeMoveFromStrings pieces wordToBeWritten (theStartCoord) (third wordTripFromState)
-            //        let u = canAppendWord st wordToBeWritten.Length theStartCoord dir
-            //        let result = Some (theMoveFromLongWord, (theWord |> Option.get), (third wordTripFromState))
-                    
-            //    | None -> 
-                
-
-
-
-
-               
-            
-        
-
-        for i in 0..boardList.Length-1 do
-            let c = boardList.Item i |> snd |> fst
-            let coord = boardList.Item i |> fst
-            let aList = stepper1 realDict c hand (StringBuilder()) List.empty 
-            let aMap =
-                Map.ofList [
-                for s in aList -> s, (coord)
-                ]
-            stringToCoordMap <- join stringToCoordMap aMap
-            finalWordList <- finalWordList @ aList
-
-        
-        let possibleWords = finalWordList
-                            |> List.map (fun word -> (word, getPossibleMoves st word.Length (Map.find word stringToCoordMap)))
-                            |> List.map (fun word  -> (fst word, (snd word |> fst) ))
-                            |> List.filter (fun (_, d) -> d <> No)
-        let (fstString, dir) =  possibleWords |> List.item 0
-        
-        let stringCoord = Map.tryFind fstString stringToCoordMap
-        printfn "mAXword: %A" fstString
-        let acString = fstString.Remove(0,1)
-        let (x,y) = stringCoord |> Option.get
-        let startCoord = (if dir = Down then (x, y+1) else (x+1, y))
-
-        let move = makeMoveFromStrings st (acString) startCoord dir
-        
-        Some (move, fstString, dir)
-                   
-        
-        
-        //stepper1 realDict 'A' hand (StringBuilder()) List.empty
-        //stepper1 realDict 'A' (hand.Remove (hand |> Map.minKeyValue |> fst)) (StringBuilder()) List.empty
-
-
-    let myFunction<'a> (st: State.state) (pieces: Map<uint32, tile>) =
-        let IsFirstMove = st.boardS.IsEmpty
-        let board = st.boardS
-        let handIds = st.hand
-        
-        let hand =
-            pieces
-            |> Map.fold
-                (fun acc k (v) ->
-                    if MultiSet.contains k handIds then
-                        match v with
-                        |  tile -> 
-                            let charVal = tile |> Set.minElement |> fst
-                            let pointVal = tile |> Set.minElement |> snd
-                            Map.add charVal pointVal acc
-                        
-                    else
-                        acc)
-                Map.empty
-        
-        
-        let realDict = st.dict
-        
-        
-        
-        let rec stepper dict (charSet:Map<char,int>) (wordList) (wordBuilder: StringBuilder) count  = 
-            if count = charSet.Count then
-                wordList
-            else
-            //let char = Map.minKeyValue charSet |> fst
-            let charList = Map.toList charSet
-            let charPair = charList.Item count
-            let char = charList.Item count |> fst
-            
-
-            
-            match Dictionary.step (char) dict with
-
-            
-            | Some (true, d) -> 
-                                let builder = wordBuilder.Append(char)
-                                let word = wordBuilder.ToString()
-                                let updatedWordList = word :: wordList
-                                printfn "its a word!: %s\n%A" word charSet
-                                stepper d (Map.remove char charSet) updatedWordList builder count
-                                
-            | Some (false, d) -> 
-                                let builder = wordBuilder.Append(char)
-                                let prefix = wordBuilder.ToString()
-                                //printfn "Not a word!: %s\n%A" prefix charSet
-                                stepper d (Map.remove char charSet) wordList builder count
-                                 
-            | None -> printfn "Char: %A" char
-                      printfn "Wordlist: %A" wordList
-                      if wordBuilder.Length = 0 then 
-                        wordList
-                      else
-                        let builder = wordBuilder.Remove(wordBuilder.Length-1 , 1)
-                        let updatedCharSet = charSet.Remove char |> Map.toList
-                        let ucs = List.append updatedCharSet [charPair] |> Map.ofList
-                        
-                        stepper dict ucs wordList builder count
-                      
-                
-        let mutable finalWordList = []
-        for i in 0..hand.Count do
-            let aList = stepper realDict hand List.empty (StringBuilder()) i 
-            finalWordList <- finalWordList @ aList
-            
-        printfn "finalWordList: %A" finalWordList
-        let fstString =  finalWordList |> List.max
-        let move = makeMoveFromStrings st (fstString) (0,0) Right
-        (move, fstString, Right)
-        
-
 
 
 module Scrabble =
@@ -500,19 +252,12 @@ module Scrabble =
     let playGame cstream pieces (st : State.state) =
 
         let rec aux (st : State.state) =
-            //if st.playerNumber = 1u then printfn "player1moves: %A\n" st.hand
-            //if st.playerNumber = 2u then printfn "player2moves: %A" st.hand
+
             
             Print.printHand pieces (State.hand st)
             
             let smth = myMod.myNewMove st pieces
             // remove the force print when you move on from manual input (or when you have learnt the format)
-            forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
-            //printfn "board: %A" st.boardS
-            
-            //let input =  System.Console.ReadLine()
-
-            //let move = RegEx.parseMove input
             let lastCoordinate = st.lastPlayedCoord
             
             
@@ -532,43 +277,12 @@ module Scrabble =
                                 //let changeTiles = (pieces |> Map.toList) |> List.fold (fun acc (k, v) -> k :: acc ) []
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) myMove) // keep the debug lines. They are useful.          
 
-                //send cstream (SMChange (changeTiles))
-            //let hand =
-            //pieces
-            //|> Map.fold
-            //    (fun acc k (v) ->
-            //        if MultiSet.contains k st.hand then
-            //            match v with
-            //            |  tile -> 
-            //                let charVal = tile |> Set.minElement |> fst
-            //                let pointVal = tile |> Set.minElement |> snd
-            //                Map.add charVal pointVal acc
-                        
-            //        else
-            //            acc)
-            //    Map.empty
-            //if st.boardS.IsEmpty then
-            //    let myFunc = (myMod.myNewMove st pieces Right) 
-            //    let (myMove, playedWord, dir) = myFunc
-            //    let lastCoord = (myMove.Item (myMove.Length-1) |> fst)
-            //    playedWords <- playedWords @ [(playedWord, lastCoord, dir)]
-            //    send cstream (SMPlay myMove)
-            //else
-            //    let (notFirstMove, playedWord, dir) = (myMod.myMove st pieces) |> Option.get
-            //    let lastCoord = (notFirstMove.Item (notFirstMove.Length-1) |> fst)
-            //    playedWords <- playedWords @ [(playedWord, lastCoord, dir)]
-            //    send cstream (SMPlay notFirstMove)
-            
-            
-                //send cstream (SMPlay myMod.myMove st pieces)
-
             let msg = recv cstream
             debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) myMove) // keep the debug lines. They are useful.
             
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
                 
-
                 let rm = 
                     ms
                     |> List.fold (fun acc (c, (ui, (c, i))) -> MultiSet.remove ui 1u acc) st.hand
@@ -576,7 +290,6 @@ module Scrabble =
                 let addPiecesList = 
                     newPieces
                     |> List.fold (fun acc (x, y) -> MultiSet.add x y acc) rm
-                printfn "before board: %A" st.boardS
                 let updatedBoardState = List.fold(fun acc (coord,(_, (x,y))) -> Map.add coord (x,y) acc ) st.boardS ms
                 
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
@@ -591,28 +304,9 @@ module Scrabble =
                 let st' = {st with boardS = updatedBoardState}// This state needs to be updated
                 aux st'
             |RCM (CMChangeSuccess(newPieces)) ->
-                //let rec addNewGainedTiles (newTiles: (uint32 * uint32) list) (hand: MultiSet.MultiSet<uint32>) =
-                //    //printfn "newtile: %A" newTiles
-                //    match newTiles with
-                //    | [] -> hand
-                //    | h :: t -> addNewGainedTiles t (MultiSet.addSingle (fst h) hand)
-
-                //let newHand = MultiSet.empty
-                //let newHand = addNewGainedTiles newPieces newHand
-
-                //let rm  = 
-                //    newPieces
-                //    |> List.fold (fun acc (x, _) -> MultiSet.remove x 1u acc) st.hand
-                
-                //let handcount = MultiSet.toList st.hand 
-                //for i in 0..(handcount.Length+1) do 
-                //let rm = 
-                //    ms
-                //    |> List.fold (fun acc (c, (ui, (c, i))) -> MultiSet.remove ui 1u acc) st.hand
                 let newHand = 
                     newPieces
                     |> List.fold (fun acc (x, y) -> MultiSet.add x y acc) MultiSet.empty
-                printfn "new hand%A" newPieces
 
                 let st' = { st with hand = newHand }
                 aux st' 
@@ -621,9 +315,7 @@ module Scrabble =
                 let st' = st // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
-            //| RCM (CMChangeSuccess newHand) -> 
-            // 
-            
+
                         
             | RCM a -> failwith (sprintf "not implmented: %A" a)
             |RGPE err ->
