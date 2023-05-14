@@ -510,15 +510,15 @@ module Scrabble =
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
             //printfn "board: %A" st.boardS
             
-            let input =  System.Console.ReadLine()
+            //let input =  System.Console.ReadLine()
 
-            let move = RegEx.parseMove input
+            //let move = RegEx.parseMove input
             let lastCoordinate = st.lastPlayedCoord
             
             
             let playInDir = ( if st.wordsPlayed % 2 = 0 then Right else Down)
             let mutable newLastCoord = (0,0)
-            debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+          
             let (myMove) = (myMod.myNewMove st pieces playInDir lastCoordinate) 
             match myMove with
             | Some move -> 
@@ -530,7 +530,7 @@ module Scrabble =
                 let handlist = MultiSet.toList st.hand 
                 send cstream (SMChange handlist)
                                 //let changeTiles = (pieces |> Map.toList) |> List.fold (fun acc (k, v) -> k :: acc ) []
-                    
+            debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) myMove) // keep the debug lines. They are useful.          
 
                 //send cstream (SMChange (changeTiles))
             //let hand =
@@ -563,7 +563,7 @@ module Scrabble =
                 //send cstream (SMPlay myMod.myMove st pieces)
 
             let msg = recv cstream
-            debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) myMove) // keep the debug lines. They are useful.
             
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
@@ -635,7 +635,7 @@ module Scrabble =
 
                      let st' = {st with hand = newHandSet }
                      aux st' 
-                     |_ -> printfn "Gameplay Error:\n%A\n Boards:%A Move: %A " err st.boardS move; aux st
+                     |_ -> printfn "Gameplay Error:\n%A\n Boards:%A Move: %A " err st.boardS myMove; aux st
 
             
 
